@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>product page</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+</head>
+
+<body>
+
+  <div id="app">
+    <div class="container">
+      <!-- form -->
+      <div class="row border p-3 m-1" v-if="cartData.carts.length>0">
+        <h2>Order</h2>
+        <v-form v-slot="{ errors }" ref="form" @submit.="createOrder">
+          <div class="form-floating mb-3">
+            <v-field id="name" name="name" type="name" class="form-control" :class="{ 'is-invalid': errors['name'] }"
+              rules="required" v-model="user.name"></v-field>
+            <label for="name">Name</label>
+            <error-message name="name" class="invalid-feedback"></error-message>
+          </div>
+          <div class="form-floating mb-3">
+            <v-field id="email" name="email" type="email" class="form-control"
+              :class="{ 'is-invalid': errors['email'] }" rules="email|required" v-model="user.email"></v-field>
+            <label for="email">Email</label>
+            <error-message name="email" class="invalid-feedback"></error-message>
+          </div>
+          <div class="form-floating mb-3">
+            <v-field id="tel" name="tel" type="tel" class="form-control" :class="{ 'is-invalid': errors['tel'] }"
+              :rules="isPhone" rules="required|min:11" v-model="user.tel"></v-field>
+            <label for="tel">Phone</label>
+            <error-message name="tel" class="invalid-feedback"></error-message>
+          </div>
+          <div class="form-floating mb-3">
+            <v-field id="address" name="address" type="address" class="form-control"
+              :class="{ 'is-invalid': errors['address'] }" rules="required" v-model="user.address"></v-field>
+            <label for="address">Address</label>
+            <error-message name="address" class="invalid-feedback"></error-message>
+          </div>
+          <div class="form-floating mb-3">
+            <textarea id="message" name="message" class="form-control" :class="{ 'is-invalid': errors['message'] }"
+              rules="required" v-model="user.message"></textarea>
+            <label for="message">Any other request</label>
+            <error-message name="message" class="invalid-feedback"></error-message>
+          </div>
+          <div class="text-end">
+            <button class="btn btn-primary" type="submit"
+              :disabled="cartData.carts.length === 0 || Object.keys(errors).length>0">Submit</button>
+          </div>
+        </v-form>
+      </div>
+      <!-- Cart -->
+      <div class="row border p-3 m-1">
+        <div class="d-flex justify-content-between p-1">
+          <h2>Shopping Cart</h2>
+          <div class="col-2">
+            <button type="button" class="btn btn-outline-danger w-100" @click="removeAllItem"
+              :disabled="cartData.carts.length === 0">
+              Delete All</button>
+          </div>
+        </div>
+
+        <template v-if="cartData.carts.length > 0">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="20">ITEM</th>
+                <th scope="20">QTY</th>
+                <th scope="20">PRICE</th>
+                <th scope="20">TOTAL PRICE</th>
+                <th scope="20"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in cartData.carts" :key="item.id" style="width: 200px">
+                <td scope="row">
+                  <div :style="{backgroundImage:`url(${item.product.imageUrl})`}"
+                    style="height: 100px; background-size: cover; background-position: center">
+                  </div>
+                </td>
+                <td>
+                  <select class="form-select" v-model="item.qty" @change="updateCartItem(item)"
+                    :disabled="isLoading === item.id">
+                    <option :value="num" v-for="num in 20" :key="`${num}+${item.id}`">{{num}}
+                    </option>
+                  </select>
+                </td>
+                <td>
+                  £ {{item.product.price}}</td>
+                <td class="text-danger">£ {{Math.round(item.total)}}
+                </td>
+                <td><button type="button" class="btn border" @click="removeCartItem(item.id)"><i
+                      class="bi bi-trash"></i>Remove</button>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4" class="table-active">Total</td>
+                <td class="fw-bold fs-5">£{{Math.round(cartData.total)}}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </template>
+        <div class="cart-noItem" v-else>
+          <h3><i class="bi bi-cart-plus"></i></h3>
+          <h3>Your shopping cart is empty</h3>
+          <p>Get some fresh and healthy</p>
+        </div>
+      </div>
+      <!-- Product List -->
+      <div class="row p-3 m-1 border">
+        <!-- productMoadl -->
+        <h2>Fruit</h2>
+        <product-modal :id="productId" @add-cart="addCart" ref="productModal"></product-modal>
+
+        <div v-for="product in products" :key="product.id" class="card p-3" style="width: 18rem;">
+        <a @click="openProductModal(product.id)" style="cursor: pointer;">
+          <div :style="{backgroundImage:`url(${product.imageUrl})`}"
+            style="height: 200px; background-size: cover; background-position: center">
+          </div></a>
+          
+          <div class="card-body">
+            <h5 class="card-title fw-bold">{{ product.title }}<span class="badge bg-warning text-dark ms-1 fw-normal">{{
+                product.category }}</span></h5>
+            <p class="card-text">{{ product.description }}.</p>
+            <div class="card-price-group">
+              <p v-if="product.price === product.origin_price" class="text-danger fs-3 me-2">
+                £{{product.price}}</p>
+              <p v-else><span class="text-danger fs-3 me-2">£{{product.price}}</span>
+                <del class="me-1">Was £{{product.origin_price}}</del>
+              </p>
+            </div>
+            <button type="button" class="btn btn-danger" @click="addCart(product.id)"
+              :disabled="isLoading === product.id"><i v-show="isLoading === product.id"
+                class="fas fa-spinner fa-pulse me-1"></i>Add to cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- x-template -->
+  <script type="text/x-template" id="userProductModal">
+        <div class="modal" tabindex="-1" ref="modal">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Product</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col">
+                            <img :src="product.imageUrl" alt="" class="img-fluid"></div>
+                        <div class="col">
+                            <h3>{{ product.title }}</h3>
+                            <p>{{ product.description}}</p>
+                            <p class="text-danger fs-3">£ {{ product.price}} <del class="fs-6 text-dark">Was £ {{ product.origin_price}}</del></p>
+                            <select min="1" v-model="qty">
+                                <option :value="num" v-for="num in 20" :key="`${num}+${product.id}`">{{num}}</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                  <button type="button" class="btn btn-primary" @click="addToCart(this.qty)">Add to Cart</button>
+                </div>
+              </div>
+            </div>
+          </div>
+    </script>
+
+
+  <script src="https://kit.fontawesome.com/94db154147.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js"
+    integrity="sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"
+    integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13"
+    crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.24.0/axios.min.js"></script>
+  <script src="https://unpkg.com/vue@next"></script>
+  <script src="https://unpkg.com/vee-validate"></script>
+  <script src="https://unpkg.com/@vee-validate/i18n@4.1.0"></script>
+  <script src="https://unpkg.com/@vee-validate/rules"></script>
+  <script src="./js/cart.javascript"></script>
+</body>
+
+</html>
